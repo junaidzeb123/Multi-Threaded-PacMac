@@ -35,6 +35,8 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(width, height), "Game");
     window.setFramerateLimit(60);
 
+
+   std:: cout<<"hello";
     sf::Clock clock;
     sf::Time elapsedTime;
     sf::Time timerDuration = sf::seconds(2);
