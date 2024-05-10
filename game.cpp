@@ -19,54 +19,72 @@ g++ -c game.cpp&& g++ game.o -o sfml-app -lsfml-graphics -lsfml-window -lsfml-sy
 */
 #define width 800
 #define height 700
-int main() {
-    Texture maptect;
+int size = 30;
 
-    int size = 30;
-    sf::RectangleShape rec({(float)size, (float)size});
+void drawBorder(RenderWindow &window) {
+    sf::RectangleShape rec({(float)800, (float)5});
     rec.setFillColor({Color::Blue});
     rec.setOutlineColor({124, 252, 0});
 
+    window.draw(rec);
+    rec.setPosition({0,size*19+10}); //(x,y)
+    window.draw(rec);
+  
 
+    rec.setSize({5,700});
+    rec.setPosition({0,0}); //(x,y)
+    window.draw(rec);
 
-    Sprite map;
-    map.setTexture(maptect);
-    map.setPosition(50, 50);
+    rec.setPosition({size*15+10,0}); //(x,y)
+    window.draw(rec);
+
+    window.display();
+}
+
+int main() {
+    Texture maptect;
+
+    sf::RectangleShape rec({size, size});
+    rec.setFillColor({Color::Blue});
+    rec.setOutlineColor({124, 252, 0});
+    rec.setOutlineColor({124, 252, 0});
+
     sf::RenderWindow window(sf::VideoMode(width, height), "Game");
     window.setFramerateLimit(60);
 
     sf::Clock clock;
     sf::Time elapsedTime;
-    sf::Time timerDuration = sf::seconds(2);
+    sf::Time timerDuration = sf::seconds(1);
 
     rec.setFillColor({Color::Blue});
     rec.setSize({size, size});
 
-    int x = 0;
-    int y = 0;
+    drawBorder(window);
 
+
+    int x = 20;
+    int y = 20;
 
     for (int i = 0; i < 19; i++) {
-        for (int j = 0; j < 13; j++) {
+        for (int j = 0; j < 17; j++) {
             if (grid[i][j]) {
                 rec.setPosition(x, y);
-                window.draw(rec);
+               window.draw(rec);
                 window.display();
             }
             x += size;
-
-            while (elapsedTime <= timerDuration) {
-                elapsedTime = clock.getElapsedTime();
-            }
-            clock.restart();
+        //     while (elapsedTime <= timerDuration) {
+        //         elapsedTime = clock.getElapsedTime();
+        //     }
+        //    clock.restart();
         }
-        x = 0;
+        x = 20;
         y += size;
     }
 
+    window.display();
     while (window.isOpen()) {
         Event event;
-        window.display();
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) {
                 window.close();
