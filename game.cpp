@@ -1,6 +1,9 @@
 #include "enemy.h"
 #include "utils.h"
 #include "walls.h"
+#include <fcntl.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include <stack>
 #include <time.h>
 /*
@@ -11,17 +14,19 @@ g++ -c game.cpp&& g++ game.o -o sfml-app -lsfml-graphics -lsfml-window -lsfml-sy
 
 ////////////////////////////////////////////////////
 
-#define Window_width 1080
+#define Window_width 1000
 #define Window_height 700
+sf::RenderWindow window(sf::VideoMode(Window_width, Window_height), "Game");
 
 int totalCoins = 0;
 bool Pacturn = true;
-sf::RenderWindow window(sf::VideoMode(Window_width, Window_height), "Game");
+Ghost ghosts[4];
 
 void LoadPacmanSupport(Sprite &temp, Sprite &Pacman) {
     temp.setPosition(Pacman.getPosition().x, Pacman.getPosition().y);
     Pacman = temp;
 }
+
 void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction) {
     if (timer > 0.02) {
         if (direction == 'r') {
@@ -60,10 +65,12 @@ void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction) {
         timer = 0;
     }
 }
+
 struct tempos {
     int x;
     int y;
 };
+
 int coin_animation_count = 0;
 void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *coin_ani) {
     std::stack<std::pair<int, int>> stack;
@@ -109,8 +116,8 @@ void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec) {
     Sprite producer[3];
     Texture tx[3];
     tx[0].loadFromFile("p.png");
-    tx[1].loadFromFile("e11.png");
-    tx[2].loadFromFile("e22.png");
+    tx[1].loadFromFile("./img/Enemies/e11.png");
+    tx[2].loadFromFile("./img/Enemies/e22.png");
     for (int i = 0; i < 3; i++) {
         producer[i].setTexture(tx[i]);
         producer[i].setScale(0.035, 0.035);
@@ -174,6 +181,7 @@ bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman) {
     }
     return false;
 }
+
 void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime, float speed, char &direction) {
     float dt = deltaTime.asSeconds();
     sf::Vector2f movement(0.0f, 0.0f);
@@ -192,6 +200,7 @@ void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime,
 
     Pacman.move(movement);
 }
+
 void teleport(Sprite &Pacman) {
     if (Pacman.getPosition().y < 150)
         Pacman.setPosition(Pacman.getPosition().x, 650);
@@ -202,29 +211,75 @@ void teleport(Sprite &Pacman) {
     else if (Pacman.getPosition().x > 920)
         Pacman.setPosition(150, Pacman.getPosition().y);
 }
-void ghost_random_movement_support(float &ghost_movement_timer, Ghost *ghosts, sf::Time deltaTime1, float threshold, Sprite &Pacman) {
+
+struct ghostMovementData {
+    float *ghost_movement_timer;
+    sf::Time deltaTime1;
+    float threshold;
+    Sprite *Pacman;
+    int index;
+    ghostMovementData(float *time, Ghost *ghosts, Time deltaTime, float threshold, Sprite *Pacman, int index) {
+        ghost_movement_timer = time;
+        this->deltaTime1 = deltaTime;
+        this->threshold = threshold;
+        this->Pacman = Pacman;
+        this->index = index;
+    }
+
+    ghostMovementData() {
+    }
+};
+
+void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman) {
+    for (int i = 0; i < 4; i++) {
+        teleport(ghosts[i].ghost);
+        ghostCollisionWall(&ghosts[i]);
+        // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
+        ghostCollisionPacman(&ghosts[i], Pacman);
+    }
+}
+
+/////////////////////////////////////////Threads////////////////////////////////////////////
+void *firstGhost(void *att) {
     int choice = 0;
-    if (ghost_movement_timer > threshold) {
+    ghostMovementData *data = (ghostMovementData *)att;
+    if (*data->ghost_movement_timer > data->threshold) {
         choice = selectRandom(4);
         cout << choice << endl;
         selectGhostDirection(ghosts[choice].ghost_direction);
-        ghost_movement_timer = 0;
+        *data->ghost_movement_timer = 0;
     }
     for (int i = 0; i < 4; i++) {
         ghostCollisionWall(&ghosts[i]);
         // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
-        ghostCollisionPacman(&ghosts[i], Pacman);
-        ghost_movement(&ghosts[i], deltaTime1);
+        ghostCollisionPacman(&ghosts[i], *data->Pacman);
+        ghost_movement(&ghosts[i], data->deltaTime1);
     }
 }
-/////////////////////////////////////////Threads////////////////////////////////////////////
 
-void Game_Engine() {
+void *PlayerThread(void *attr) {
+    char *currentDirection = (char *)attr;
+    Event event;
+    while (window.pollEvent(event)) {
+        if (event.type == sf::Event::Closed || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
+            window.close();
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
+            *currentDirection = 'u';
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+            *currentDirection = 'd';
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
+            *currentDirection = 'l';
+        else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
+            *currentDirection = 'r';
+    }
+}
 
+void *Game_Engine(void *) {
+    cout << "hello";
     Sprite Psheet[8];
     Texture Pac[8];
     Sprite Pacman;
-    Ghost ghosts[4];
+
     for (int i = 0; i < 8; i++) {
         Pac[i].loadFromFile("pacman1/" + std::to_string(i + 1) + ".png");
         Psheet[i].setTexture(Pac[i]);
@@ -262,6 +317,8 @@ void Game_Engine() {
     bool AnimatedDisplay = false;
     char currentDirection = '\0';
     while (window.isOpen()) {
+        pthread_t playerId;
+        pthread_t ghostsId[4];
         time = clock.getElapsedTime().asSeconds();
         clock.restart();
         timer += time;
@@ -272,32 +329,23 @@ void Game_Engine() {
         }
         if (AnimatedDisplay) // some wait to display the animation
         {
-            Event event;
+
             window.display();
-            while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
-                    window.close();
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-                    currentDirection = 'u';
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
-                    currentDirection = 'd';
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))
-                    currentDirection = 'l';
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
-                    currentDirection = 'r';
+            pthread_create(&playerId, NULL, PlayerThread, &currentDirection);
+            ghostMovementData data[4];
+            for (int i = 0; i < 4; i++) {
+                data[i].deltaTime1 = deltaTime1;
+                data[i].ghost_movement_timer = &ghost_movement_timer;
+                data[i].Pacman = &Pacman;
+                data[i].threshold = 1;
+                data[i].index = i;
             }
-
-            teleport(Pacman);
-            for (int i = 0; i < 4; i++)
-                teleport(ghosts[i].ghost);
-
+            for (int i = 0; i < 4; i++) {
+                pthread_create(&ghostsId[i], NULL, firstGhost, &data);
+            }
             deltaTime1 = clock1.restart();
-            if (total_timer > 2) {
-                ghost_random_movement_support(ghost_movement_timer, ghosts, deltaTime1, 0.2, Pacman);
-            } else {
-                ghost_random_movement_support(ghost_movement_timer, ghosts, deltaTime1, 0.08, Pacman);
-            }
-
+            teleport(Pacman);
+            ghostCollisionCheck(ghosts, Pacman);
             deltaTime = clock.restart();
             if (!Collion_With_Walls(rec, Pacman, currentDirection)) {
                 movePacman(Pacman, rec, deltaTime, Pacman_speed, currentDirection);
@@ -305,7 +353,7 @@ void Game_Engine() {
             loadPacman(Psheet, Pacman, timer, currentDirection);
             Collion_With_Coins(coin, Pacman);
 
-            // Draw the maze and Pacman sprite
+            // // Draw the maze and Pacman sprite
             window.clear();
             for (int j = 0; j < 236; j++) {
                 if (j < 188)
@@ -315,14 +363,20 @@ void Game_Engine() {
             for (int i = 0; i < 4; i++)
                 window.draw(ghosts[i].ghost);
             window.draw(Pacman);
+            pthread_join(playerId, NULL);
+            for (int i = 0; i < 4; i++)
+                pthread_join(ghostsId[i], NULL);
         }
     }
-    cout << totalCoins << endl;
 }
 
 int main() {
     srand(time(0));
-    Game_Engine();
+    pthread_t id;
 
+    window.setActive(false);
+    pthread_create(&id, NULL, Game_Engine, NULL);
+
+    pthread_join(id, NULL);
     return 0;
 }
