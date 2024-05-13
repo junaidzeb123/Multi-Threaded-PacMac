@@ -21,7 +21,14 @@ int pelletCounter = 0;
 
 #define Window_width 1000
 #define Window_height 700
+
 sf::RenderWindow window(sf::VideoMode(Window_width, Window_height), "Game");
+
+/*  SCENARIO # 1*/
+sem_t Scenario1a;     // common to both pacman and ghost
+sem_t Scenario1b;     // for updating no of ghost reading maze
+int GhostPresent = 0; // to keep check how many ghost are reading maza
+/*  SCENARIO # 1*/
 
 int totalCoins = 0;
 bool Pacturn = true;
@@ -298,18 +305,18 @@ bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direc
     return false; // No collision
 }
 
-bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman)
-{
-    for (int i = 0; i < 236; i++)
-    {
-        if (coin[i].getGlobalBounds().intersects(Pacman.getGlobalBounds()))
-        {
+bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman) {
+    // as pacman acts a writer so it lock the cs as soon as he enter the cs
+    sem_wait(&Scenario1a);
+    for (int i = 0; i < 236; i++) {
+        if (coin[i].getGlobalBounds().intersects(Pacman.getGlobalBounds())) {
             coin[i].setPosition(-100, -100);
             totalCoins--;
-            TotalScore += 2;
+            sem_post(&Scenario1a);
             return true;
         }
     }
+    sem_post(&Scenario1a);
     return false;
 }
 
@@ -365,20 +372,36 @@ void *GhostThread(void *att)
 {
     int choice = 0;
     ghostMovementData *data = (ghostMovementData *)att;
-    if (*data->ghost_movement_timer > data->threshold)
-    {
-        choice = selectRandom(4);
-        cout << choice << endl;
-        selectGhostDirection(ghosts[choice].ghost_direction);
+    if (*data->ghost_movement_timer > data->threshold) {
+        selectGhostDirection(ghosts[data->index].ghost_direction);
         *data->ghost_movement_timer = 0;
     }
-    for (int i = 0; i < 4; i++)
-    {
-        ghostCollisionWall(&ghosts[i]);
-        // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
-        ghostCollisionPacman(&ghosts[i], *data->Pacman);
-        ghost_movement(&ghosts[i], data->deltaTime1);
-    }
+
+    /*locking hte common semaphore shared b/w pacman and ghost.
+    because as soon as the ghost enter for reading the pacman must
+    not be allowed to change the maze.*/
+    sem_wait(&Scenario1a);
+
+    /*incementing the value of no of ghost reading the maze.*/
+    sem_wait(&Scenario1b);
+    GhostPresent++;
+    sem_post(&Scenario1b);
+
+    ghostCollisionWall(&ghosts[data->index]);
+    // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
+    ghostCollisionPacman(&ghosts[data->index], *data->Pacman);
+    ghost_movement(&ghosts[data->index], data->deltaTime1);
+
+    /*acquiring the lock of semaphore which is shared between ghosts.*/
+    sem_wait(&Scenario1b);
+    GhostPresent--;
+
+    /*checking that if no ghost is in cs then allow pacman to acquire maze*/
+    if (GhostPresent <= 0)
+        sem_post(&Scenario1a);
+
+    /*singling for ghosts if they want to access the GhostPresen*/
+    sem_post(&Scenario1b);
 }
 
 void *UiConrolThread(void *attr)
@@ -514,9 +537,8 @@ void *Game_Engine(void *)
                 data[i].threshold = 1;
                 data[i].index = i;
             }
-            for (int i = 0; i < 4; i++)
-            {
-                pthread_create(&ghostsId[i], NULL, GhostThread, &data);
+            for (int i = 0; i < 4; i++) {
+                pthread_create(&ghostsId[i], NULL, GhostThread, &data[i]);
             }
             deltaTime1 = clock1.restart();
             teleport(Pacman);
@@ -569,6 +591,8 @@ int main()
     pthread_t id;
 
     window.setActive(false);
+    sem_init(&Scenario1a, 0, 1);
+    sem_init(&Scenario1b, 0, 1);
     pthread_create(&id, NULL, Game_Engine, NULL);
 
     pthread_join(id, NULL);
