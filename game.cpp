@@ -21,6 +21,29 @@ sf::RenderWindow window(sf::VideoMode(Window_width, Window_height), "Game");
 int totalCoins = 0;
 bool Pacturn = true;
 Ghost ghosts[4];
+int coin_animation_count = 0;
+struct tempos {
+    int x;
+    int y;
+};
+
+struct ghostMovementData {
+    float *ghost_movement_timer;
+    sf::Time deltaTime1;
+    float threshold;
+    Sprite *Pacman;
+    int index;
+    ghostMovementData(float *time, Ghost *ghosts, Time deltaTime, float threshold, Sprite *Pacman, int index) {
+        ghost_movement_timer = time;
+        this->deltaTime1 = deltaTime;
+        this->threshold = threshold;
+        this->Pacman = Pacman;
+        this->index = index;
+    }
+
+    ghostMovementData() {
+    }
+};
 
 void LoadPacmanSupport(Sprite &temp, Sprite &Pacman) {
     temp.setPosition(Pacman.getPosition().x, Pacman.getPosition().y);
@@ -66,12 +89,6 @@ void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction) {
     }
 }
 
-struct tempos {
-    int x;
-    int y;
-};
-
-int coin_animation_count = 0;
 void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *coin_ani) {
     std::stack<std::pair<int, int>> stack;
     stack.push({x, y});
@@ -212,24 +229,6 @@ void teleport(Sprite &Pacman) {
         Pacman.setPosition(150, Pacman.getPosition().y);
 }
 
-struct ghostMovementData {
-    float *ghost_movement_timer;
-    sf::Time deltaTime1;
-    float threshold;
-    Sprite *Pacman;
-    int index;
-    ghostMovementData(float *time, Ghost *ghosts, Time deltaTime, float threshold, Sprite *Pacman, int index) {
-        ghost_movement_timer = time;
-        this->deltaTime1 = deltaTime;
-        this->threshold = threshold;
-        this->Pacman = Pacman;
-        this->index = index;
-    }
-
-    ghostMovementData() {
-    }
-};
-
 void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman) {
     for (int i = 0; i < 4; i++) {
         teleport(ghosts[i].ghost);
@@ -240,7 +239,7 @@ void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman) {
 }
 
 /////////////////////////////////////////Threads////////////////////////////////////////////
-void *firstGhost(void *att) {
+void *GhostThread(void *att) {
     int choice = 0;
     ghostMovementData *data = (ghostMovementData *)att;
     if (*data->ghost_movement_timer > data->threshold) {
@@ -257,7 +256,7 @@ void *firstGhost(void *att) {
     }
 }
 
-void *PlayerThread(void *attr) {
+void *UiConrolThread(void *attr) {
     char *currentDirection = (char *)attr;
     Event event;
     while (window.pollEvent(event)) {
@@ -316,8 +315,9 @@ void *Game_Engine(void *) {
     float Pacman_speed = 150.0f;
     bool AnimatedDisplay = false;
     char currentDirection = '\0';
+
     while (window.isOpen()) {
-        pthread_t playerId;
+        pthread_t UithreadId;
         pthread_t ghostsId[4];
         time = clock.getElapsedTime().asSeconds();
         clock.restart();
@@ -327,11 +327,12 @@ void *Game_Engine(void *) {
         if (timer > 0.2 && AnimatedDisplay == false) {
             AnimatedDisplay = true;
         }
-        if (AnimatedDisplay) // some wait to display the animation
-        {
+        // some wait to display the animation
+        if (AnimatedDisplay) {
 
             window.display();
-            pthread_create(&playerId, NULL, PlayerThread, &currentDirection);
+            pthread_create(&UithreadId, NULL, UiConrolThread, &currentDirection);
+
             ghostMovementData data[4];
             for (int i = 0; i < 4; i++) {
                 data[i].deltaTime1 = deltaTime1;
@@ -341,7 +342,7 @@ void *Game_Engine(void *) {
                 data[i].index = i;
             }
             for (int i = 0; i < 4; i++) {
-                pthread_create(&ghostsId[i], NULL, firstGhost, &data);
+                pthread_create(&ghostsId[i], NULL, GhostThread, &data);
             }
             deltaTime1 = clock1.restart();
             teleport(Pacman);
@@ -363,7 +364,7 @@ void *Game_Engine(void *) {
             for (int i = 0; i < 4; i++)
                 window.draw(ghosts[i].ghost);
             window.draw(Pacman);
-            pthread_join(playerId, NULL);
+            pthread_join(UithreadId, NULL);
             for (int i = 0; i < 4; i++)
                 pthread_join(ghostsId[i], NULL);
         }
