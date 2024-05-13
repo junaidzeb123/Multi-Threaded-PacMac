@@ -259,7 +259,7 @@ void *GhostThread(void *att) {
     }
 
     /*locking hte common semaphore shared b/w pacman and ghost.
-    because as soon as the ghost enter for reading the pacman must
+    because as soon as the ghost enter for reading, the pacman must
     not be allowed to change the maze.*/
     sem_wait(&Scenario1a);
 
