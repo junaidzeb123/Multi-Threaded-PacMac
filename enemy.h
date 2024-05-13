@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <ncurses.h>
+#include <semaphore.h>
 #include <stack>
 #include <string.h>
 #include <string>
@@ -19,7 +20,12 @@ using namespace sf;
 
 int livesCount = 3;
 int no_of_ghosts = 0;
+bool isoutofHouse[4] = {false, false, false, false};
+sem_t keys[2];
+sem_t permits[2];
 
+sem_t semaphoreTimerHelp;
+sem_t Scenario3Helper;
 struct Ghost {
     Texture ghost_tex;
     Sprite ghost;
@@ -34,37 +40,54 @@ struct Ghost {
         ghost.setOrigin(ghost.getLocalBounds().width / 2, ghost.getLocalBounds().height / 2);
 
         ghost_speed = 30.0;
-        ghost_direction = 'u';
+        ghost_direction = 'l';
         no_of_ghosts++;
     }
 };
 
+
+Ghost ghosts[4];
 int selectRandom(int dividend) {
     return rand() % dividend + 1;
 }
 
-void selectGhostDirection(char &direction) {
-    int choice = selectRandom(4);
-    switch (choice) {
-    case 1:
-        direction = 'u';
-        break;
+void selectGhostDirection(char &direction, int index) {
+    int choice;
+    if (isoutofHouse[index]) /*if ghost is out of ghost house then ghosts are allowed to move in 4 direction.
+                               but if in house only 3 directions.*/
+        choice = selectRandom(4);
+    else
+        choice = selectRandom(3);
 
-    case 2:
-        direction = 'd';
-        break;
+    int ghostsXPostion = ghosts[index].ghost.getPosition().x;
+    int ghostsYPostion = ghosts[index].ghost.getPosition().y;
 
-    case 3:
+    /*is allowing ghost to go inside the house*/
+    if (ghostsXPostion > 511 && ghostsXPostion < 574 && ghostsYPostion >= 357 && ghostsYPostion <= 534 && choice == 1 ){
         direction = 'l';
-        break;
-
-    case 4:
-        direction = 'r';
-        break;
-
-    default:
-        break;
+        return;
     }
+
+        switch (choice) {
+        case 1:
+            direction = 'd';
+            break;
+
+        case 2:
+            direction = 'l';
+            break;
+
+        case 3:
+            direction = 'r';
+            break;
+
+        case 4:
+            direction = 'u';
+            break;
+
+        default:
+            break;
+        }
 }
 
 void ghost_movement(Ghost *g, sf::Time deltaTime) {
@@ -82,7 +105,7 @@ void ghost_movement(Ghost *g, sf::Time deltaTime) {
     g->ghost.move(movement);
 }
 
-void ghostCollisionWall(Ghost *g) {
+void ghostCollisionWall(Ghost *g, int index) {
     for (int i = 0; i < totalWalls; i++) {
         if (g->ghost.getGlobalBounds().intersects(rec[i].getGlobalBounds())) {
             if (g->ghost_direction == 'r') {
@@ -96,7 +119,7 @@ void ghostCollisionWall(Ghost *g) {
             }
             char prevdir = g->ghost_direction;
             while (g->ghost_direction == prevdir)
-                selectGhostDirection(g->ghost_direction);
+                selectGhostDirection(g->ghost_direction, index);
         }
     }
 }
@@ -125,4 +148,7 @@ void ghostCollisionPacman(Ghost *g, Sprite &Pacman) {
         Pacman.setPosition(195, 195);
         livesCount--;
     }
+}
+
+void MovingGhostoutofHouse(Ghost *q) {
 }
