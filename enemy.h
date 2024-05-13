@@ -23,17 +23,20 @@ int no_of_ghosts = 0;
 bool isoutofHouse[4] = {false, false, false, false};
 sem_t keys[2];
 sem_t permits[2];
-
 sem_t semaphoreTimerHelp;
 sem_t Scenario3Helper;
-struct Ghost {
+bool blueGhost = 0;
+
+struct Ghost
+{
     Texture ghost_tex;
     Sprite ghost;
     float ghost_speed;
     char ghost_direction;
 
-    Ghost() {
-        ghost_tex.loadFromFile("./img/Enemies/E" + std::to_string(no_of_ghosts % 5 + 1) + ".png");
+    Ghost()
+    {
+        ghost_tex.loadFromFile("./img/Enemies/E" + std::to_string(no_of_ghosts % 4 + 1) + ".png");
         ghost.setTexture(ghost_tex);
         ghost.setScale(0.09, 0.09);
         ghost.setPosition(470 + no_of_ghosts * 45, 420);
@@ -45,13 +48,14 @@ struct Ghost {
     }
 };
 
-
 Ghost ghosts[4];
-int selectRandom(int dividend) {
+int selectRandom(int dividend)
+{
     return rand() % dividend + 1;
 }
 
-void selectGhostDirection(char &direction, int index) {
+void selectGhostDirection(char &direction, int index)
+{
     int choice;
     if (isoutofHouse[index]) /*if ghost is out of ghost house then ghosts are allowed to move in 4 direction.
                                but if in house only 3 directions.*/
@@ -63,58 +67,78 @@ void selectGhostDirection(char &direction, int index) {
     int ghostsYPostion = ghosts[index].ghost.getPosition().y;
 
     /*is allowing ghost to go inside the house*/
-    if (ghostsXPostion > 511 && ghostsXPostion < 574 && ghostsYPostion >= 357 && ghostsYPostion <= 534 && choice == 1 ){
+    if (ghostsXPostion > 511 && ghostsXPostion < 574 && ghostsYPostion >= 357 && ghostsYPostion <= 534 && choice == 1)
+    {
         direction = 'l';
         return;
     }
 
-        switch (choice) {
-        case 1:
-            direction = 'd';
-            break;
+    switch (choice)
+    {
+    case 1:
+        direction = 'd';
+        break;
 
-        case 2:
-            direction = 'l';
-            break;
+    case 2:
+        direction = 'l';
+        break;
 
-        case 3:
-            direction = 'r';
-            break;
+    case 3:
+        direction = 'r';
+        break;
 
-        case 4:
-            direction = 'u';
-            break;
+    case 4:
+        direction = 'u';
+        break;
 
-        default:
-            break;
-        }
+    default:
+        break;
+    }
 }
 
-void ghost_movement(Ghost *g, sf::Time deltaTime) {
+void ghost_movement(Ghost *g, sf::Time deltaTime)
+{
     float dt = deltaTime.asSeconds();
     sf::Vector2f movement(0.0f, 0.0f);
-    if (g->ghost_direction == 'l') {
+    if (g->ghost_direction == 'l')
+    {
         movement.x -= g->ghost_speed * dt;
-    } else if (g->ghost_direction == 'r') {
+    }
+    else if (g->ghost_direction == 'r')
+    {
         movement.x += g->ghost_speed * dt;
-    } else if (g->ghost_direction == 'u') {
+    }
+    else if (g->ghost_direction == 'u')
+    {
         movement.y -= g->ghost_speed * dt;
-    } else if (g->ghost_direction == 'd') {
+    }
+    else if (g->ghost_direction == 'd')
+    {
         movement.y += g->ghost_speed * dt;
     }
     g->ghost.move(movement);
 }
 
-void ghostCollisionWall(Ghost *g, int index) {
-    for (int i = 0; i < totalWalls; i++) {
-        if (g->ghost.getGlobalBounds().intersects(rec[i].getGlobalBounds())) {
-            if (g->ghost_direction == 'r') {
+void ghostCollisionWall(Ghost *g, int index)
+{
+    for (int i = 0; i < totalWalls; i++)
+    {
+        if (g->ghost.getGlobalBounds().intersects(rec[i].getGlobalBounds()))
+        {
+            if (g->ghost_direction == 'r')
+            {
                 g->ghost.move(-5, 0);
-            } else if (g->ghost_direction == 'l') {
+            }
+            else if (g->ghost_direction == 'l')
+            {
                 g->ghost.move(5, 0);
-            } else if (g->ghost_direction == 'd') {
+            }
+            else if (g->ghost_direction == 'd')
+            {
                 g->ghost.move(0, -5);
-            } else if (g->ghost_direction == 'u') {
+            }
+            else if (g->ghost_direction == 'u')
+            {
                 g->ghost.move(0, 5);
             }
             char prevdir = g->ghost_direction;
@@ -124,31 +148,51 @@ void ghostCollisionWall(Ghost *g, int index) {
     }
 }
 
-void ghostCollisionOtherGhosts(Ghost *g, Ghost *others) {
-    for (int i = 0; i < 4; i++) {
+void ghostCollisionOtherGhosts(Ghost *g, Ghost *others)
+{
+    for (int i = 0; i < 4; i++)
+    {
         if (g->ghost.getTexture() == others[i].ghost.getTexture())
             continue;
-        if (g->ghost.getGlobalBounds().intersects(others[i].ghost.getGlobalBounds())) {
-            if (g->ghost_direction == 'r') {
+        if (g->ghost.getGlobalBounds().intersects(others[i].ghost.getGlobalBounds()))
+        {
+            if (g->ghost_direction == 'r')
+            {
                 g->ghost_direction = 'l';
-            } else if (g->ghost_direction == 'l') {
+            }
+            else if (g->ghost_direction == 'l')
+            {
                 g->ghost_direction = 'r';
-            } else if (g->ghost_direction == 'd') {
+            }
+            else if (g->ghost_direction == 'd')
+            {
                 g->ghost_direction = 'u';
-            } else if (g->ghost_direction == 'd') {
+            }
+            else if (g->ghost_direction == 'd')
+            {
                 g->ghost_direction = 'd';
-            } else
+            }
+            else
                 g->ghost_direction = '\0';
         }
     }
 }
 
-void ghostCollisionPacman(Ghost *g, Sprite &Pacman) {
-    if (g->ghost.getGlobalBounds().intersects(Pacman.getGlobalBounds())) {
-        Pacman.setPosition(195, 195);
-        livesCount--;
-    }
+void ghostCollisionPacman(Ghost *g, Sprite &Pacman)
+{
+        if (g->ghost.getGlobalBounds().intersects(Pacman.getGlobalBounds()))
+        {
+            if(!blueGhost)
+            {Pacman.setPosition(195, 195);
+            livesCount--;}
+            else
+            {
+                g->ghost.setPosition(500,320);
+            }
+        }
+  
 }
 
-void MovingGhostoutofHouse(Ghost *q) {
+void MovingGhostoutofHouse(Ghost *q)
+{
 }

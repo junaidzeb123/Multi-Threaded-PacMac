@@ -36,24 +36,31 @@ int totalCoins = 0;
 bool Pacturn = true;
 int coin_animation_count = 0;
 int TotalScore = 0;
+bool toggle = true;
 
-struct tempos {
+struct tempos
+{
     int x;
     int y;
 };
 
-struct forPellet {
+struct forPellet
+{
     sf::CircleShape *Pellet;
     sf::Sprite *Pacman;
 };
 
-void placePellet(sf::CircleShape *Pellet) {
+void placePellet(sf::CircleShape *Pellet)
+{
     int a = rand() % 16 + 1;
     int b = rand() % 21 + 3;
 
-    for (int i = 0; i < 8; i++) {
-        if (Pellet[i].getPosition().x == -10 && Pellet[i].getPosition().y == -10) {
-            while (temp[a][b] != 0) {
+    for (int i = 0; i < 8; i++)
+    {
+        if (Pellet[i].getPosition().x == -10 && Pellet[i].getPosition().y == -10)
+        {
+            while (temp[a][b] != 0)
+            {
                 a = rand() % 16 + 1;
                 b = rand() % 21 + 4;
             }
@@ -64,16 +71,22 @@ void placePellet(sf::CircleShape *Pellet) {
     }
 }
 
-void collionWithPellet(Sprite *Pacman, sf::CircleShape *Pellet) {
-    for (int i = 0; i < 8; i++) {
-        if (Pacman->getGlobalBounds().intersects(Pellet[i].getGlobalBounds())) {
+void collionWithPellet(Sprite *Pacman, sf::CircleShape *Pellet)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if (Pacman->getGlobalBounds().intersects(Pellet[i].getGlobalBounds()))
+        {
             Pellet[i].setPosition(-10, -10);
             TotalScore += 20;
+            blueGhost = true;
+            toggle = true;
         }
     }
 }
 
-void *PelletProducer(void *Pellet) {
+void *PelletProducer(void *Pellet)
+{
 
     sem_wait(&pelletEmpty);
     sem_wait(&pelletMutex);
@@ -86,7 +99,8 @@ void *PelletProducer(void *Pellet) {
     return Pellet;
 }
 
-void *PelletConsumer(void *Pellet_structure) {
+void *PelletConsumer(void *Pellet_structure)
+{
     sem_wait(&pelletFull);
     sem_wait(&pelletMutex);
 
@@ -98,13 +112,15 @@ void *PelletConsumer(void *Pellet_structure) {
     return Pellet_structure;
 }
 
-struct ghostMovementData {
+struct ghostMovementData
+{
     float *ghost_movement_timer;
     sf::Time deltaTime1;
     float threshold;
     Sprite *Pacman;
     int index;
-    ghostMovementData(float *time, Ghost *ghosts, Time deltaTime, float threshold, Sprite *Pacman, int index) {
+    ghostMovementData(float *time, Ghost *ghosts, Time deltaTime, float threshold, Sprite *Pacman, int index)
+    {
         ghost_movement_timer = time;
         this->deltaTime1 = deltaTime;
         this->threshold = threshold;
@@ -112,46 +128,69 @@ struct ghostMovementData {
         this->index = index;
     }
 
-    ghostMovementData() {
+    ghostMovementData()
+    {
     }
 };
 
-void LoadPacmanSupport(Sprite &temp, Sprite &Pacman) {
+void LoadPacmanSupport(Sprite &temp, Sprite &Pacman)
+{
     temp.setPosition(Pacman.getPosition().x, Pacman.getPosition().y);
     Pacman = temp;
 }
 
-void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction) {
-    if (timer > 0.04) {
-        if (direction == 'r') {
-            if (Pacturn == true) {
+void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction)
+{
+    if (timer > 0.04)
+    {
+        if (direction == 'r')
+        {
+            if (Pacturn == true)
+            {
                 Pacturn = false;
                 LoadPacmanSupport(pSheet[0], Pacman);
-            } else {
+            }
+            else
+            {
                 Pacturn = true;
                 LoadPacmanSupport(pSheet[1], Pacman);
             }
-        } else if (direction == 'l') {
-            if (Pacturn == true) {
+        }
+        else if (direction == 'l')
+        {
+            if (Pacturn == true)
+            {
                 Pacturn = false;
                 LoadPacmanSupport(pSheet[2], Pacman);
-            } else {
+            }
+            else
+            {
                 Pacturn = true;
                 LoadPacmanSupport(pSheet[3], Pacman);
             }
-        } else if (direction == 'u') {
-            if (Pacturn == true) {
+        }
+        else if (direction == 'u')
+        {
+            if (Pacturn == true)
+            {
                 Pacturn = false;
                 LoadPacmanSupport(pSheet[4], Pacman);
-            } else {
+            }
+            else
+            {
                 Pacturn = true;
                 LoadPacmanSupport(pSheet[5], Pacman);
             }
-        } else if (direction == 'd') {
-            if (Pacturn == true) {
+        }
+        else if (direction == 'd')
+        {
+            if (Pacturn == true)
+            {
                 Pacturn = false;
                 LoadPacmanSupport(pSheet[6], Pacman);
-            } else {
+            }
+            else
+            {
                 Pacturn = true;
                 LoadPacmanSupport(pSheet[7], Pacman);
             }
@@ -160,24 +199,28 @@ void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction) {
     }
 }
 
-void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *coin_ani) {
+void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *coin_ani)
+{
     std::stack<std::pair<int, int>> stack;
     stack.push({x, y});
 
-    while (!stack.empty()) {
+    while (!stack.empty())
+    {
         auto current = stack.top();
         stack.pop();
 
         int i = current.first;
         int j = current.second;
 
-        if (i < 1 || i > 15 || j < 1 || j > 24 || grid[i][j]) {
+        if (i < 1 || i > 15 || j < 1 || j > 24 || grid[i][j])
+        {
             continue; // Out of bounds or already visited
         }
 
         grid[i][j] = 1; // Mark as visited
 
-        if (!((i == 5 || i == 6 || i == 11 || i == 12) && (j == 24 || j == 25 || j == 1 || j == 2))) {
+        if (!((i == 5 || i == 6 || i == 11 || i == 12) && (j == 24 || j == 25 || j == 1 || j == 2)))
+        {
             coin[totalCoins].setPosition(j * wallSize + 160, i * wallSize + 160);
             coin_ani[coin_animation_count].x = j * wallSize + 160;
             coin_ani[coin_animation_count].y = i * wallSize + 160;
@@ -193,13 +236,15 @@ void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *co
     }
 }
 
-void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec) {
+void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec)
+{
     Sprite aniPac[3];
     Texture tx[3];
     tx[0].loadFromFile("p.png");
     tx[1].loadFromFile("./img/Enemies/e11.png");
     tx[2].loadFromFile("./img/Enemies/e22.png");
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         aniPac[i].setTexture(tx[i]);
         aniPac[i].setScale(0.035, 0.035);
     }
@@ -207,9 +252,12 @@ void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec) {
 
     tempos *coin_animation = new tempos[236];
 
-    for (int i = 1; i <= 15; ++i) {
-        for (int j = 1; j <= 24; ++j) {
-            if (!grid[i][j]) {
+    for (int i = 1; i <= 15; ++i)
+    {
+        for (int j = 1; j <= 24; ++j)
+        {
+            if (!grid[i][j])
+            {
                 dfsLoadCoin(coin, grid, i, j, coin_animation);
             }
         }
@@ -218,7 +266,8 @@ void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec) {
     window.clear();
     for (int i = 0; i < totalWalls; i++)
         window.draw(rec[i]);
-    for (int i = 0, j = totalCoins / 3, k = 2 * (totalCoins / 3) + 1; i < 79; i++, j++, k++) {
+    for (int i = 0, j = totalCoins / 3, k = 2 * (totalCoins / 3) + 1; i < 79; i++, j++, k++)
+    {
         aniPac[0].setPosition(coin_animation[i].x, coin_animation[i].y);
         aniPac[1].setPosition(coin_animation[j].x, coin_animation[j].y);
         aniPac[2].setPosition(coin_animation[k].x, coin_animation[k].y);
@@ -230,20 +279,31 @@ void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec) {
     }
 }
 
-bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direction) {
+bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direction)
+{
     sf::FloatRect pacmanBounds = Pacman.getGlobalBounds();
-    for (int i = 0; i < totalWalls; i++) {
+    for (int i = 0; i < totalWalls; i++)
+    {
         sf::FloatRect wallBounds = rec[i].getGlobalBounds();
-        if (wallBounds.intersects(pacmanBounds)) {
-            if (direction == 'r') {
+        if (wallBounds.intersects(pacmanBounds))
+        {
+            if (direction == 'r')
+            {
                 Pacman.move(-5, 0);
-            } else if (direction == 'l') {
+            }
+            else if (direction == 'l')
+            {
                 Pacman.move(5, 0);
-            } else if (direction == 'd') {
+            }
+            else if (direction == 'd')
+            {
                 Pacman.move(0, -5);
-            } else if (direction == 'u') {
+            }
+            else if (direction == 'u')
+            {
                 Pacman.move(0, 5);
-            } else
+            }
+            else
                 return false;
             direction = '\0';
             return true; // Collision detected
@@ -252,13 +312,17 @@ bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direc
     return false; // No collision
 }
 
-bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman) {
+bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman)
+{
     // as pacman acts a writer so it lock the cs as soon as he enter the cs
     sem_wait(&Scenario1a);
-    for (int i = 0; i < 236; i++) {
-        if (coin[i].getGlobalBounds().intersects(Pacman.getGlobalBounds())) {
+    for (int i = 0; i < 236; i++)
+    {
+        if (coin[i].getGlobalBounds().intersects(Pacman.getGlobalBounds()))
+        {
             coin[i].setPosition(-100, -100);
             totalCoins--;
+            TotalScore += 2;
             sem_post(&Scenario1a);
             return true;
         }
@@ -267,26 +331,32 @@ bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman) {
     return false;
 }
 
-void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime, float speed, char &direction) {
+void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime, float speed, char &direction)
+{
     float dt = deltaTime.asSeconds();
     sf::Vector2f movement(0.0f, 0.0f);
-    if (direction == 'l') {
+    if (direction == 'l')
+    {
         movement.x -= speed * dt;
     }
-    if (direction == 'r') {
+    if (direction == 'r')
+    {
         movement.x += speed * dt;
     }
-    if (direction == 'u') {
+    if (direction == 'u')
+    {
         movement.y -= speed * dt;
     }
-    if (direction == 'd') {
+    if (direction == 'd')
+    {
         movement.y += speed * dt;
     }
 
     Pacman.move(movement);
 }
 
-void teleport(Sprite &Pacman) {
+void teleport(Sprite &Pacman)
+{
     if (Pacman.getPosition().y < 150)
         Pacman.setPosition(Pacman.getPosition().x, 650);
     else if (Pacman.getPosition().y > 650)
@@ -297,8 +367,10 @@ void teleport(Sprite &Pacman) {
         Pacman.setPosition(150, Pacman.getPosition().y);
 }
 
-void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman, int index) {
-    for (int i = 0; i < 4; i++) {
+void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman, int index)
+{
+    for (int i = 0; i < 4; i++)
+    {
         teleport(ghosts[i].ghost);
         ghostCollisionWall(&ghosts[i], index);
         // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
@@ -307,10 +379,12 @@ void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman, int index) {
 }
 
 /////////////////////////////////////////Threads////////////////////////////////////////////
-void *GhostThread(void *att) {
+void *GhostThread(void *att)
+{
     int choice = 0;
     ghostMovementData *data = (ghostMovementData *)att;
-    if (*data->ghost_movement_timer > data->threshold) {
+    if (*data->ghost_movement_timer > data->threshold)
+    {
         selectGhostDirection(ghosts[data->index].ghost_direction, data->index);
         *data->ghost_movement_timer = 0;
     }
@@ -344,11 +418,12 @@ void *GhostThread(void *att) {
 
     /*For getting ghost out of house.
         SCENARIO # 03
-    
+
     */
     /*is ghoust is still  in the house.*/
 
-    if (isoutofHouse[data->index] == false) {
+    if (isoutofHouse[data->index] == false)
+    {
         sem_wait(&Scenario3Helper);
         /* this is for the reason that here is am reading the value of keys[] which are
            semaphore too so and after getting the value of semaphore key they can be change
@@ -357,7 +432,8 @@ void *GhostThread(void *att) {
 
         int iskeysAcquired = 0;
         sem_getvalue(&keys[0], &iskeysAcquired);
-        if (iskeysAcquired == 1 && timeforHouseOut >= 1) {
+        if (iskeysAcquired == 1 && timeforHouseOut >= 1)
+        {
             /*getting the lock and permit.*/
             sem_wait(&keys[0]);
             sem_wait(&permits[0]);
@@ -373,10 +449,12 @@ void *GhostThread(void *att) {
     return att;
 }
 
-void *UiConrolThread(void *attr) {
+void *UiConrolThread(void *attr)
+{
     char *currentDirection = (char *)attr;
     Event event;
-    while (window.pollEvent(event)) {
+    while (window.pollEvent(event))
+    {
         if (event.type == sf::Event::Closed || sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
             window.close();
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
@@ -395,7 +473,8 @@ void *UiConrolThread(void *attr) {
     return attr;
 }
 
-void *Game_Engine(void *attr) {
+void *Game_Engine(void *attr)
+{
     Sprite Psheet[8];
     Texture Pac[8];
     Sprite Pacman;
@@ -407,7 +486,8 @@ void *Game_Engine(void *attr) {
     Score.setFillColor(sf::Color::White);
     Score.setPosition(160, 30);
 
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         Pac[i].loadFromFile("pacman1/" + std::to_string(i + 1) + ".png");
         Psheet[i].setTexture(Pac[i]);
         Psheet[i].setScale(1.3, 1.3);
@@ -421,7 +501,8 @@ void *Game_Engine(void *attr) {
     Sprite lives[3];
     Texture lv;
     lv.loadFromFile("p.png");
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         lives[i].setTexture(lv);
         lives[i].setScale(0.05, 0.05);
         lives[i].setPosition(800 + i * 40, 30);
@@ -429,12 +510,14 @@ void *Game_Engine(void *attr) {
     sf::CircleShape coin[236];
     sf::CircleShape Pellet[8];
 
-    for (int i = 0; i < 236; i++) {
+    for (int i = 0; i < 236; i++)
+    {
         coin[i].setFillColor(sf::Color::Yellow);
         coin[i].setOutlineColor(sf::Color(255, 215, 0)); // RGB values for golden color
         coin[i].setRadius(3);
     }
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         Pellet[i].setFillColor(sf::Color::Blue);
         Pellet[i].setOutlineColor(sf::Color(255, 215, 0)); // RGB values for golden color
         Pellet[i].setRadius(5);
@@ -455,6 +538,7 @@ void *Game_Engine(void *attr) {
     float timer = 0;
     float total_timer = 0;
     float ghost_movement_timer = 0;
+    float ghostBluetimer = 0;
     int choice = 0;
     sf::Time deltaTime;
     sf::Time deltaTime1;
@@ -472,7 +556,8 @@ void *Game_Engine(void *attr) {
     pthread_t Consumer;
     //////////////////////////////
 
-    while (window.isOpen()) {
+    while (window.isOpen())
+    {
         pthread_t UithreadId;
         pthread_t ghostsId[4];
         time = clock.getElapsedTime().asSeconds();
@@ -481,31 +566,36 @@ void *Game_Engine(void *attr) {
         ghost_movement_timer += time;
         total_timer += time;
         timeforHouseOut += time;
-        if (timer > 0.2 && AnimatedDisplay == false) {
+        if (timer > 0.2 && AnimatedDisplay == false)
+        {
             AnimatedDisplay = true;
         }
         // some wait to display the animation
-        if (AnimatedDisplay) {
+        if (AnimatedDisplay)
+        {
 
             window.display();
             pthread_create(&UithreadId, NULL, UiConrolThread, &currentDirection);
 
             ghostMovementData data[4];
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 data[i].deltaTime1 = deltaTime1;
                 data[i].ghost_movement_timer = &ghost_movement_timer;
                 data[i].Pacman = &Pacman;
                 data[i].threshold = 1;
                 data[i].index = i;
             }
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < 4; i++)
+            {
                 pthread_create(&ghostsId[i], NULL, GhostThread, &data[i]);
             }
             deltaTime1 = clock1.restart();
             teleport(Pacman);
 
             deltaTime = clock.restart();
-            if (!Collion_With_Walls(rec, Pacman, currentDirection)) {
+            if (!Collion_With_Walls(rec, Pacman, currentDirection))
+            {
                 movePacman(Pacman, rec, deltaTime, Pacman_speed, currentDirection);
             }
             loadPacman(Psheet, Pacman, timer, currentDirection);
@@ -518,8 +608,47 @@ void *Game_Engine(void *attr) {
             if (livesCount <= 0)
                 exit(0);
 
+            if (blueGhost)
+            {
+                ghostBluetimer += time;
+                if (toggle)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        ghosts[i].ghost_tex.loadFromFile("./img/Enemies/E1.png");
+                        ghosts[i].ghost.setTexture(ghosts[i].ghost_tex);
+                        ghosts[i].ghost.setScale(0.09, 0.09);
+                        ghosts[i].ghost.setOrigin(ghosts[i].ghost.getLocalBounds().width / 2, ghosts[i].ghost.getLocalBounds().height / 2);
+
+                    }
+                    toggle = false;
+                }
+                if (ghostBluetimer > 2)
+                {
+                    ghostBluetimer = 0;
+                    blueGhost = false;
+                    toggle = true;
+                }
+            }
+            else
+            {
+                if (toggle)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        ghosts[i].ghost_tex.loadFromFile("./img/Enemies/E" + std::to_string(i+1) + ".png");
+                        ghosts[i].ghost.setTexture(ghosts[i].ghost_tex);
+                        ghosts[i].ghost.setScale(0.09, 0.09);
+                        ghosts[i].ghost.setOrigin(ghosts[i].ghost.getLocalBounds().width / 2, ghosts[i].ghost.getLocalBounds().height / 2);
+
+                    }
+                    toggle = false;
+                }
+            }
+
             window.clear();
-            for (int j = 0; j < 236; j++) {
+            for (int j = 0; j < 236; j++)
+            {
                 if (j < 188)
                     window.draw(rec[j]);
                 window.draw(coin[j]);
@@ -545,7 +674,8 @@ void *Game_Engine(void *attr) {
     return attr;
 }
 
-int main() {
+int main()
+{
     srand(time(0));
     pthread_t id;
 
