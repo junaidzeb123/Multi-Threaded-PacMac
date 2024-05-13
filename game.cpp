@@ -17,6 +17,11 @@ sem_t pelletEmpty;
 sem_t pelletFull;
 int pelletCounter = 0;
 
+/* Scenario 4 counting semaphore for SpeedBoosts*/
+sem_t scene4;
+
+/* Scenario 4*/
+
 ////////////////////////////////////////////////////
 
 #define Window_width 1000
@@ -43,75 +48,16 @@ struct tempos
     int x;
     int y;
 };
-
 struct forPellet
 {
     sf::CircleShape *Pellet;
     sf::Sprite *Pacman;
 };
-
-void placePellet(sf::CircleShape *Pellet)
+struct forSpeedBoost
 {
-    int a = rand() % 16 + 1;
-    int b = rand() % 21 + 3;
-
-    for (int i = 0; i < 8; i++)
-    {
-        if (Pellet[i].getPosition().x == -10 && Pellet[i].getPosition().y == -10)
-        {
-            while (temp[a][b] != 0)
-            {
-                a = rand() % 16 + 1;
-                b = rand() % 21 + 4;
-            }
-            grid[a][b] = 2;
-            temp[a][b] = 2;
-            Pellet[i].setPosition(b * wallSize + 160, a * wallSize + 160);
-        }
-    }
-}
-
-void collionWithPellet(Sprite *Pacman, sf::CircleShape *Pellet)
-{
-    for (int i = 0; i < 8; i++)
-    {
-        if (Pacman->getGlobalBounds().intersects(Pellet[i].getGlobalBounds()))
-        {
-            Pellet[i].setPosition(-10, -10);
-            TotalScore += 20;
-            blueGhost = true;
-            toggle = true;
-        }
-    }
-}
-
-void *PelletProducer(void *Pellet)
-{
-
-    sem_wait(&pelletEmpty);
-    sem_wait(&pelletMutex);
-
-    sf::CircleShape *CastPellet = (sf::CircleShape *)Pellet;
-    placePellet(CastPellet);
-
-    sem_post(&pelletFull);
-    sem_post(&pelletMutex);
-    return Pellet;
-}
-
-void *PelletConsumer(void *Pellet_structure)
-{
-    sem_wait(&pelletFull);
-    sem_wait(&pelletMutex);
-
-    forPellet *CastPellet = (forPellet *)Pellet_structure;
-    collionWithPellet(CastPellet->Pacman, CastPellet->Pellet);
-
-    sem_post(&pelletEmpty);
-    sem_post(&pelletMutex);
-    return Pellet_structure;
-}
-
+    sf::CircleShape *SpeedPellet;
+    Ghost *ghost;
+};
 struct ghostMovementData
 {
     float *ghost_movement_timer;
@@ -132,13 +78,69 @@ struct ghostMovementData
     {
     }
 };
+void placePellet(sf::CircleShape *Pellet)
+{
+    int a = rand() % 16 + 1;
+    int b = rand() % 21 + 3;
 
+    for (int i = 0; i < 8; i++)
+    {
+        if (Pellet[i].getPosition().x == -10 && Pellet[i].getPosition().y == -10)
+        {
+            while (temp[a][b] != 0)
+            {
+                a = rand() % 16 + 1;
+                b = rand() % 21 + 4;
+            }
+            grid[a][b] = 2;
+            temp[a][b] = 2;
+            Pellet[i].setPosition(b * wallSize + 160, a * wallSize + 160);
+        }
+    }
+}
+void collionWithPellet(Sprite *Pacman, sf::CircleShape *Pellet)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        if (Pacman->getGlobalBounds().intersects(Pellet[i].getGlobalBounds()))
+        {
+            Pellet[i].setPosition(-10, -10);
+            TotalScore += 20;
+            blueGhost = true;
+            toggle = true;
+        }
+    }
+}
+void *PelletProducer(void *Pellet)
+{
+
+    sem_wait(&pelletEmpty);
+    sem_wait(&pelletMutex);
+
+    sf::CircleShape *CastPellet = (sf::CircleShape *)Pellet;
+    placePellet(CastPellet);
+
+    sem_post(&pelletFull);
+    sem_post(&pelletMutex);
+    return Pellet;
+}
+void *PelletConsumer(void *Pellet_structure)
+{
+    sem_wait(&pelletFull);
+    sem_wait(&pelletMutex);
+
+    forPellet *CastPellet = (forPellet *)Pellet_structure;
+    collionWithPellet(CastPellet->Pacman, CastPellet->Pellet);
+
+    sem_post(&pelletEmpty);
+    sem_post(&pelletMutex);
+    return Pellet_structure;
+}
 void LoadPacmanSupport(Sprite &temp, Sprite &Pacman)
 {
     temp.setPosition(Pacman.getPosition().x, Pacman.getPosition().y);
     Pacman = temp;
 }
-
 void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction)
 {
     if (timer > 0.04)
@@ -198,7 +200,6 @@ void loadPacman(Sprite *pSheet, Sprite &Pacman, float &timer, char direction)
         timer = 0;
     }
 }
-
 void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *coin_ani)
 {
     std::stack<std::pair<int, int>> stack;
@@ -235,7 +236,6 @@ void dfsLoadCoin(sf::CircleShape *coin, int grid[][26], int x, int y, tempos *co
         stack.push({i, j - 1}); // Left
     }
 }
-
 void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec)
 {
     Sprite aniPac[3];
@@ -278,7 +278,6 @@ void loadCoinDFS(sf::CircleShape *coin, sf::RectangleShape *rec)
         sleep(0.2);
     }
 }
-
 bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direction)
 {
     sf::FloatRect pacmanBounds = Pacman.getGlobalBounds();
@@ -311,7 +310,6 @@ bool Collion_With_Walls(sf::RectangleShape *rec, sf::Sprite &Pacman, char &direc
     }
     return false; // No collision
 }
-
 bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman)
 {
     // as pacman acts a writer so it lock the cs as soon as he enter the cs
@@ -330,7 +328,6 @@ bool Collion_With_Coins(sf::CircleShape *coin, Sprite &Pacman)
     sem_post(&Scenario1a);
     return false;
 }
-
 void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime, float speed, char &direction)
 {
     float dt = deltaTime.asSeconds();
@@ -354,7 +351,6 @@ void movePacman(sf::Sprite &Pacman, sf::RectangleShape *rec, sf::Time deltaTime,
 
     Pacman.move(movement);
 }
-
 void teleport(Sprite &Pacman)
 {
     if (Pacman.getPosition().y < 150)
@@ -366,7 +362,6 @@ void teleport(Sprite &Pacman)
     else if (Pacman.getPosition().x > 920)
         Pacman.setPosition(150, Pacman.getPosition().y);
 }
-
 void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman, int index)
 {
     for (int i = 0; i < 4; i++)
@@ -376,6 +371,29 @@ void ghostCollisionCheck(Ghost *ghosts, Sprite &Pacman, int index)
         // ghostCollisionOtherGhosts(&ghosts[i],ghosts);
         ghostCollisionPacman(&ghosts[i], Pacman);
     }
+}
+void collionWithSpeedBoost(Ghost *ghst, sf::CircleShape *boosts)
+{
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 4; j++)
+        {
+            if (ghst[j].ghost.getGlobalBounds().intersects(boosts[i].getGlobalBounds()))
+            {
+                ghst[j].ghost_speed += 60;
+                boosts[i].setPosition(-10, -10);
+            }
+        }
+    }
+}
+void *SpeedGhosts(void *ptr)
+{
+    sem_wait(&scene4);
+
+    forSpeedBoost *fsb = (forSpeedBoost *)ptr;
+    collionWithSpeedBoost(fsb->ghost, fsb->SpeedPellet);
+
+    sem_post(&scene4);
 }
 
 /////////////////////////////////////////Threads////////////////////////////////////////////
@@ -448,7 +466,6 @@ void *GhostThread(void *att)
     }
     return att;
 }
-
 void *UiConrolThread(void *attr)
 {
     char *currentDirection = (char *)attr;
@@ -472,12 +489,12 @@ void *UiConrolThread(void *attr)
     // std::cout << "Mouse Position: (" << mousePos.x << ", " << mousePos.y << ")\n";
     return attr;
 }
-
 void *Game_Engine(void *attr)
 {
     Sprite Psheet[8];
     Texture Pac[8];
     Sprite Pacman;
+
     Font f1;
     f1.loadFromFile("arial.ttf");
     sf::Text Score;
@@ -509,6 +526,7 @@ void *Game_Engine(void *attr)
     }
     sf::CircleShape coin[236];
     sf::CircleShape Pellet[8];
+    sf::CircleShape SpeedPellets[2];
 
     for (int i = 0; i < 236; i++)
     {
@@ -520,15 +538,28 @@ void *Game_Engine(void *attr)
     {
         Pellet[i].setFillColor(sf::Color::Blue);
         Pellet[i].setOutlineColor(sf::Color(255, 215, 0)); // RGB values for golden color
-        Pellet[i].setRadius(5);
+        Pellet[i].setRadius(6);
         Pellet[i].setPosition(-10, -10);
     }
+    for (int i = 0; i < 2; i++)
+    {
+        SpeedPellets[i].setFillColor(sf::Color::Red);
+        SpeedPellets[i].setOutlineColor(sf::Color(255, 215, 0)); // RGB values for golden color
+        SpeedPellets[i].setRadius(6);
+    }
+    SpeedPellets[0].setPosition(6 * wallSize + 160, 9 * wallSize + 160);
+    SpeedPellets[1].setPosition(19 * wallSize + 160, 9 * wallSize + 160);
+    cout << "hello";
     LoadMaze(rec, window);
     loadCoinDFS(coin, rec);
 
     forPellet obj1;
     obj1.Pellet = Pellet;
     obj1.Pacman = &Pacman;
+
+    forSpeedBoost FSB1;
+    FSB1.ghost = ghosts;
+    FSB1.SpeedPellet = SpeedPellets;
 
     sf::Clock clock;
     sf::Clock clock1;
@@ -554,6 +585,10 @@ void *Game_Engine(void *attr)
     sem_init(&pelletFull, 0, 0);
     pthread_t Producer;
     pthread_t Consumer;
+
+    sem_init(&scene4, 0, 2);
+    pthread_t speedBoost[2];
+
     //////////////////////////////
 
     while (window.isOpen())
@@ -603,6 +638,10 @@ void *Game_Engine(void *attr)
 
             pthread_create(&Producer, NULL, PelletProducer, Pellet);
             pthread_create(&Consumer, NULL, PelletConsumer, &obj1);
+
+            pthread_create(&speedBoost[0], NULL, SpeedGhosts, &FSB1);
+            pthread_create(&speedBoost[1], NULL, SpeedGhosts, &FSB1);
+
             Score.setString("SCORE : " + to_string(TotalScore));
 
             if (livesCount <= 0)
@@ -619,7 +658,6 @@ void *Game_Engine(void *attr)
                         ghosts[i].ghost.setTexture(ghosts[i].ghost_tex);
                         ghosts[i].ghost.setScale(0.09, 0.09);
                         ghosts[i].ghost.setOrigin(ghosts[i].ghost.getLocalBounds().width / 2, ghosts[i].ghost.getLocalBounds().height / 2);
-
                     }
                     toggle = false;
                 }
@@ -636,11 +674,10 @@ void *Game_Engine(void *attr)
                 {
                     for (int i = 0; i < 4; i++)
                     {
-                        ghosts[i].ghost_tex.loadFromFile("./img/Enemies/E" + std::to_string(i+1) + ".png");
+                        ghosts[i].ghost_tex.loadFromFile("./img/Enemies/E" + std::to_string(i + 1) + ".png");
                         ghosts[i].ghost.setTexture(ghosts[i].ghost_tex);
                         ghosts[i].ghost.setScale(0.09, 0.09);
                         ghosts[i].ghost.setOrigin(ghosts[i].ghost.getLocalBounds().width / 2, ghosts[i].ghost.getLocalBounds().height / 2);
-
                     }
                     toggle = false;
                 }
@@ -659,6 +696,9 @@ void *Game_Engine(void *attr)
             for (int i = 0; i < 4; i++)
                 window.draw(ghosts[i].ghost);
 
+            for (int i = 0; i < 2; i++)
+                window.draw(SpeedPellets[i]);
+
             window.draw(Pacman);
             window.draw(Score);
             for (int i = 0; i < livesCount; i++)
@@ -666,6 +706,9 @@ void *Game_Engine(void *attr)
             pthread_join(UithreadId, NULL);
             for (int i = 0; i < 4; i++)
                 pthread_join(ghostsId[i], NULL);
+
+            for (int i = 0; i < 2; i++)
+                pthread_join(speedBoost[i], NULL);
 
             pthread_join(Producer, NULL);
             pthread_join(Consumer, NULL);
