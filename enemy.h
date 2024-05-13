@@ -17,7 +17,9 @@
 using namespace std;
 using namespace sf;
 
+int livesCount = 3;
 int no_of_ghosts = 0;
+
 struct Ghost {
     Texture ghost_tex;
     Sprite ghost;
@@ -121,5 +123,6 @@ void ghostCollisionOtherGhosts(Ghost *g, Ghost *others) {
 void ghostCollisionPacman(Ghost *g, Sprite &Pacman) {
     if (g->ghost.getGlobalBounds().intersects(Pacman.getGlobalBounds())) {
         Pacman.setPosition(195, 195);
+        livesCount--;
     }
 }
