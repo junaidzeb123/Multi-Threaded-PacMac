@@ -131,9 +131,6 @@ void *PelletConsumer(void *Pellet_structure)
     forPellet *CastPellet = (forPellet *)Pellet_structure;
     collionWithPellet(CastPellet->Pacman, CastPellet->Pellet);
 
-    int val=0;
-    sem_getvalue(&pelletEmpty,&val);
-    // cout<<val<<endl;
     sem_post(&pelletEmpty);
     sem_post(&pelletMutex);
     return Pellet_structure;
@@ -388,13 +385,13 @@ void collionWithSpeedBoost(Ghost *ghst, sf::CircleShape *boosts)
         }
     }
 }
-
 void *SpeedGhosts(void *ptr)
 {
     sem_wait(&scene4);
-    forSpeedBoost *fsb = (forSpeedBoost *)ptr;
 
+    forSpeedBoost *fsb = (forSpeedBoost *)ptr;
     collionWithSpeedBoost(fsb->ghost, fsb->SpeedPellet);
+
     sem_post(&scene4);
 }
 
@@ -493,6 +490,12 @@ void *UiConrolThread(void *attr)
 }
 void *Game_Engine(void *attr)
 {
+    Sprite background;
+    Texture bg;
+    bg.loadFromFile("b3.png");
+    background.setPosition(330,background.getPosition().y);
+    background.setTexture(bg);
+    background.setScale(0.5,0.5);
     Sprite Psheet[8];
     Texture Pac[8];
     Sprite Pacman;
@@ -639,9 +642,12 @@ void *Game_Engine(void *attr)
             }
             loadPacman(Psheet, Pacman, timer, currentDirection);
             Collion_With_Coins(coin, Pacman);
-            
-           
 
+            if (!blueGhost)
+            {
+                pthread_create(&Producer, NULL, PelletProducer, Pellet);
+                pthread_create(&Consumer, NULL, PelletConsumer, &obj1);
+            }
             pthread_create(&speedBoost[0], NULL, SpeedGhosts, &FSB1);
             pthread_create(&speedBoost[1], NULL, SpeedGhosts, &FSB1);
 
@@ -685,11 +691,9 @@ void *Game_Engine(void *attr)
                     toggle = false;
                 }
             }
-            if(!blueGhost)
-            pthread_create(&Producer, NULL, PelletProducer, Pellet);
-            if(!blueGhost)
-            pthread_create(&Consumer, NULL, PelletConsumer, &obj1);
+
             window.clear();
+            window.draw(background);
             for (int j = 0; j < 236; j++)
             {
                 if (j < 188)
@@ -716,10 +720,11 @@ void *Game_Engine(void *attr)
             for (int i = 0; i < 2; i++)
                 pthread_join(speedBoost[i], NULL);
 
-            if(!blueGhost)
-            pthread_join(Producer, NULL);
-            if(!blueGhost)
-            pthread_join(Consumer, NULL);
+            if (!blueGhost)
+            {
+                pthread_join(Producer, NULL);
+                pthread_join(Consumer, NULL);
+            }
         }
     }
     return attr;
