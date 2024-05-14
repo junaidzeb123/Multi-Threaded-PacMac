@@ -42,7 +42,6 @@ bool Pacturn = true;
 int coin_animation_count = 0;
 bool toggle = true;
 
-
 struct tempos
 {
     int x;
@@ -390,15 +389,12 @@ void collionWithSpeedBoost(Ghost *ghst, sf::CircleShape *boosts)
     }
 }
 
-
-
 void *SpeedGhosts(void *ptr)
 {
     sem_wait(&scene4);
-
     forSpeedBoost *fsb = (forSpeedBoost *)ptr;
-    collionWithSpeedBoost(fsb->ghost, fsb->SpeedPellet);
 
+    collionWithSpeedBoost(fsb->ghost, fsb->SpeedPellet);
     sem_post(&scene4);
 }
 
