@@ -26,6 +26,7 @@ sem_t permits[2];
 sem_t semaphoreTimerHelp;
 sem_t Scenario3Helper;
 bool blueGhost = 0;
+int TotalScore = 0;
 
 struct Ghost
 {
@@ -49,6 +50,7 @@ struct Ghost
 };
 
 Ghost ghosts[4];
+
 int selectRandom(int dividend)
 {
     return rand() % dividend + 1;
@@ -56,6 +58,13 @@ int selectRandom(int dividend)
 
 void selectGhostDirection(char &direction, int index)
 {
+     int ghostsXPostion = ghosts[index].ghost.getPosition().x;
+    int ghostsYPostion = ghosts[index].ghost.getPosition().y;
+    if (ghostsXPostion > 511 && ghostsXPostion < 574 && ghostsYPostion >= 357 && ghostsYPostion <= 534 )
+    {
+        direction = 'l';
+        return;
+    }
     int choice;
     if (isoutofHouse[index]) /*if ghost is out of ghost house then ghosts are allowed to move in 4 direction.
                                but if in house only 3 directions.*/
@@ -63,15 +72,9 @@ void selectGhostDirection(char &direction, int index)
     else
         choice = selectRandom(3);
 
-    int ghostsXPostion = ghosts[index].ghost.getPosition().x;
-    int ghostsYPostion = ghosts[index].ghost.getPosition().y;
+   
 
     /*is allowing ghost to go inside the house*/
-    if (ghostsXPostion > 511 && ghostsXPostion < 574 && ghostsYPostion >= 357 && ghostsYPostion <= 534 && choice == 1)
-    {
-        direction = 'l';
-        return;
-    }
 
     switch (choice)
     {
@@ -188,6 +191,7 @@ void ghostCollisionPacman(Ghost *g, Sprite &Pacman)
             else
             {
                 g->ghost.setPosition(500,320);
+                TotalScore += 100;
             }
         }
   
